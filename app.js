@@ -522,10 +522,8 @@
 
     if (isFiltering) {
       $('#playCount').textContent = `(${visibleCount} / 全${plays.length})`;
-      $('#filteredCount').textContent = `(${visibleCount}件 表示中)`;
     } else {
       $('#playCount').textContent = `(${plays.length})`;
-      $('#filteredCount').textContent = '';
     }
   }
 
