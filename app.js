@@ -16,8 +16,6 @@
     { key: 'qtr', label: 'Quarter（1〜4 / OT）', type: 'allowed', allowed: ['1', '2', '3', '4', 'OT'] },
     { key: 'series', label: 'Series', type: 'number', min: 1, max: 99 },
     { key: 'hash', label: 'Hash', type: 'buttons', options: ['L', 'M', 'R'] },
-    // 敵陣エンドラインからのヤード数（1〜99）
-    { key: 'ballOn', label: 'Ball On（敵陣エンドラインから 1〜99yd）', type: 'number', min: 1, max: 99 },
     { key: 'down', key2: 'dist', label: 'Down & Distance', type: 'downdist' },
     { key: 'personnel', label: 'Personnel', type: 'text', inputMode: 'numeric' },
     { key: 'formation', label: 'OFF Formation', type: 'text', capitalize: true },
@@ -26,7 +24,7 @@
     { key: 'defSign', label: 'Def Sign', type: 'text', capitalize: true },
   ];
   const CSV_COLS = [
-    ['qtr', 'Quarter'], ['series', 'Series'], ['hash', 'Hash'], ['ballOn', 'Ball On'],
+    ['qtr', 'Quarter'], ['series', 'Series'], ['hash', 'Hash'],
     ['down', 'Down'], ['dist', 'Distance'], ['personnel', 'Personnel'],
     ['formation', 'OFF Formation'], ['play', 'Play'], ['defSign', 'Def Sign'],
   ];
@@ -34,7 +32,7 @@
   // ---------- 担当（役割）の定義 ----------
   // canAdd: 「＋ 次のプレー」で行を追加できる担当（同時に押して行が重複するのを防ぐ）
   const ROLES = {
-    situation: { label: '状況', keys: ['qtr', 'series', 'hash', 'ballOn', 'down', 'dist'], canAdd: true },
+    situation: { label: '状況', keys: ['qtr', 'series', 'hash', 'down', 'dist'], canAdd: true },
     offense: { label: 'オフェンス', keys: ['personnel', 'formation', 'play'], canAdd: false },
     defense: { label: 'Def Sign', keys: ['defSign'], canAdd: false },
     all: { label: '全項目', keys: null, canAdd: true },
@@ -281,7 +279,6 @@
   }
 
   const ORD = { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' };
-  const ballOnText = (v) => (v ? `Ball On ${v}` : '');
 
   function syncEditor() {
     const p = selectedPlay();
@@ -291,7 +288,7 @@
       $('#editingLabel').textContent = `編集中: #${idx}` + (p.updatedBy ? `（最終更新: ${p.updatedBy}）` : '');
       // どのプレーを入力しているか一目でわかる状況表示
       const dd = p.down ? `${ORD[p.down] || p.down} & ${p.dist || '?'}` : '';
-      const parts = [p.qtr && `Q${p.qtr}`, p.series && `S${p.series}`, dd, ballOnText(p.ballOn), p.hash && `Hash ${p.hash}`];
+      const parts = [p.qtr && `Q${p.qtr}`, p.series && `S${p.series}`, dd, p.hash && `Hash ${p.hash}`];
       $('#situation').textContent = parts.filter(Boolean).join('   ') || '（状況未入力）';
     } else {
       $('#editingLabel').textContent = 'プレー未選択';
@@ -346,7 +343,6 @@
     { key: 'down', label: 'DOWN', format: (v) => ORD[v] || v },
     { key: 'dist', label: 'DISTANCE' },
     { key: 'hash', label: 'HASH' },
-    { key: 'ballOn', label: 'BALL ON' },
   ];
 
   const activeFilters = {
@@ -356,7 +352,6 @@
     down: new Set(),
     dist: new Set(),
     hash: new Set(),
-    ballOn: new Set(),
   };
 
   function hasActiveFilter() {
@@ -437,7 +432,7 @@
 
     // 各値の行
     const sortedKeys = Object.keys(counts).sort((a, b) => {
-      if (f.key === 'down' || f.key === 'ballOn' || f.key === 'dist') {
+      if (f.key === 'down' || f.key === 'dist') {
         const na = parseInt(a, 10), nb = parseInt(b, 10);
         if (!isNaN(na) && !isNaN(nb)) return na - nb;
       }
@@ -507,7 +502,7 @@
         tr.classList.add('flash');
       }
       const cells = [
-        ['#', i + 1], ['qtr', p.qtr], ['series', p.series], ['hash', p.hash], ['ballOn', p.ballOn],
+        ['#', i + 1], ['qtr', p.qtr], ['series', p.series], ['hash', p.hash],
         ['down', ddText(p)], ['personnel', p.personnel], ['formation', p.formation], ['play', p.play], ['defSign', p.defSign],
       ];
       cells.forEach(([k, v]) => {
@@ -559,7 +554,7 @@
       if (last) {
         const idx = plays.length;
         const dd = last.down ? `${ORD[last.down] || last.down} & ${last.dist || '?'}` : '';
-        const parts = [`#${idx}`, last.qtr && `Q${last.qtr}`, last.series && `S${last.series}`, dd, ballOnText(last.ballOn), last.hash && `Hash ${last.hash}`];
+        const parts = [`#${idx}`, last.qtr && `Q${last.qtr}`, last.series && `S${last.series}`, dd, last.hash && `Hash ${last.hash}`];
         $('#viewBanner').textContent = '現在の最新状況: ' + (parts.filter(Boolean).join('   ') || '（未入力）');
       } else {
         $('#viewBanner').textContent = 'まだプレーがありません';
@@ -575,7 +570,7 @@
     const data = {
       qtr: last?.qtr || '1',
       series: newSeries ? String((parseInt(last?.series, 10) || 0) + 1) : (last?.series || '1'),
-      hash: '', ballOn: '',
+      hash: '',
       down: newSeries ? '1' : '', dist: newSeries ? '10' : '',
       personnel: '', formation: '', play: '', defSign: '',
       createdAt: now, createdBy: me,
