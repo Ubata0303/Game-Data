@@ -474,7 +474,7 @@
       $('#game').classList.remove('hidden');
       $('#backBtn').classList.remove('hidden');
       const gname = games.find((g) => g.id === currentGameId)?.name || '';
-      $('#gameTitle').textContent = gname + (isViewOnly ? '（👀 閲覧用）' : '');
+      $('#gameTitle').textContent = gname + (isViewOnly ? '（閲覧用）' : '');
       $('#viewBanner').classList.toggle('hidden', !isViewOnly);
       unsubPlays = store.subscribePlays(currentGameId, onPlays);
     } else {
@@ -550,8 +550,8 @@
       $('#shareModeEdit').classList.toggle('on', shareMode === 'edit');
       $('#shareModeView').classList.toggle('on', shareMode === 'view');
       $('#shareDesc').textContent = (shareMode === 'view')
-        ? '👀 閲覧用リンク：入力欄が隠れ、見るだけ専用になります（誤タップの心配なし）'
-        : '✏️ 編集用リンク：3人で分担して同時入力・編集ができます';
+        ? '閲覧用リンク：入力欄が隠れ、見るだけ専用になります（誤タップの心配なし）'
+        : '編集用リンク：3人で分担して同時入力・編集ができます';
     }
 
     $('#shareModeEdit').onclick = () => { shareMode = 'edit'; updateShareDialog(); };
