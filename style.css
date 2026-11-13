@@ -151,6 +151,18 @@ td.who { color: var(--muted); font-size: .8rem; }
 dialog { border: none; border-radius: 12px; padding: 1.2rem; width: min(360px, 90vw); }
 dialog h3 { margin: 0 0 .3rem; }
 dialog input { margin: .6rem 0; }
+
+.share-mode-toggle { display: flex; background: #eef1f5; border-radius: 10px; padding: 3px; gap: 3px; margin: 0.6rem 0; }
+.mode-btn { flex: 1; border: none; background: transparent; font-weight: 600; font-size: .85rem; padding: .5rem .3rem; min-height: 40px; }
+.mode-btn.on { background: #fff; color: var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+
+/* ---------- 閲覧専用モード ---------- */
+body.view-only #editorPane { display: none !important; }
+body.view-only #game { grid-template-columns: 1fr; }
+body.view-only tbody tr { cursor: default; }
+body.view-only #userBtn { display: none; }
+body.view-only th.mine, body.view-only td.mine { background: transparent !important; color: inherit !important; font-weight: normal !important; }
+
 .toast {
   position: fixed; left: 50%; bottom: 1.5rem; transform: translateX(-50%) translateY(20px);
   background: #111827; color: #fff; padding: .6rem 1rem; border-radius: 8px; opacity: 0;

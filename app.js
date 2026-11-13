@@ -54,6 +54,7 @@
   let prevUpdated = {};
   let lastNewestId = null;
   let pendingFollow = false;
+  let isViewOnly = false;
   const controls = {};
 
   // ---------- 共通 ----------
@@ -356,7 +357,9 @@
       const who = el('td', 'who', (p._pending ? '⏳ ' : '') + (p.updatedBy || ''));
       if (p._pending) who.title = '未送信（電波復帰後に自動送信）';
       tr.appendChild(who);
-      tr.addEventListener('click', () => selectPlay(p.id, { fromUser: true }));
+      if (!isViewOnly) {
+        tr.addEventListener('click', () => selectPlay(p.id, { fromUser: true }));
+      }
       tbody.appendChild(tr);
     });
     $('#playCount').textContent = `(${plays.length})`;
@@ -383,6 +386,19 @@
       const wrap = $('.table-wrap');
       wrap.scrollTop = wrap.scrollHeight;
     }
+
+    if (isViewOnly) {
+      const last = plays[plays.length - 1];
+      if (last) {
+        const idx = plays.length;
+        const dd = last.down ? `${ORD[last.down] || last.down} & ${last.dist || '?'}` : '';
+        const parts = [`#${idx}`, last.qtr && `Q${last.qtr}`, last.series && `S${last.series}`, dd, ballOnText(last.ballOn), last.hash && `Hash ${last.hash}`];
+        $('#viewBanner').textContent = '現在の最新状況: ' + (parts.filter(Boolean).join('   ') || '（未入力）');
+      } else {
+        $('#viewBanner').textContent = 'まだプレーがありません';
+      }
+    }
+
     updateStatus();
   }
 
@@ -447,23 +463,30 @@
   }
 
   function route() {
-    const m = location.hash.match(/^#\/game\/(.+)$/);
+    const m = location.hash.match(/^#\/(game|view)\/(.+)$/);
     if (unsubPlays) { unsubPlays(); unsubPlays = null; }
     if (m) {
-      currentGameId = m[1];
+      isViewOnly = (m[1] === 'view');
+      document.body.classList.toggle('view-only', isViewOnly);
+      currentGameId = m[2].split('?')[0];
       selectedId = null; plays = []; prevUpdated = {}; lastNewestId = null;
       $('#home').classList.add('hidden');
       $('#game').classList.remove('hidden');
       $('#backBtn').classList.remove('hidden');
-      $('#gameTitle').textContent = games.find((g) => g.id === currentGameId)?.name || '';
+      const gname = games.find((g) => g.id === currentGameId)?.name || '';
+      $('#gameTitle').textContent = gname + (isViewOnly ? '（👀 閲覧用）' : '');
+      $('#viewBanner').classList.toggle('hidden', !isViewOnly);
       unsubPlays = store.subscribePlays(currentGameId, onPlays);
     } else {
+      isViewOnly = false;
+      document.body.classList.remove('view-only');
       if (store.leaveGame) store.leaveGame();
       currentGameId = null;
       $('#game').classList.add('hidden');
       $('#home').classList.remove('hidden');
       $('#backBtn').classList.add('hidden');
       $('#gameTitle').textContent = '';
+      $('#viewBanner').classList.add('hidden');
     }
   }
 
@@ -517,15 +540,32 @@
       }
     };
     $('#csvBtn').onclick = exportCsv;
-    $('#shareBtn').onclick = () => {
-      const url = location.href;
+    let shareMode = 'edit';
+    function updateShareDialog() {
+      const base = location.href.split('#')[0];
+      const targetHash = (shareMode === 'view') ? `#/view/${currentGameId}` : `#/game/${currentGameId}`;
+      const url = base + targetHash;
       $('#shareUrlInput').value = url;
       $('#qrImg').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
+      $('#shareModeEdit').classList.toggle('on', shareMode === 'edit');
+      $('#shareModeView').classList.toggle('on', shareMode === 'view');
+      $('#shareDesc').textContent = (shareMode === 'view')
+        ? '👀 閲覧用リンク：入力欄が隠れ、見るだけ専用になります（誤タップの心配なし）'
+        : '✏️ 編集用リンク：3人で分担して同時入力・編集ができます';
+    }
+
+    $('#shareModeEdit').onclick = () => { shareMode = 'edit'; updateShareDialog(); };
+    $('#shareModeView').onclick = () => { shareMode = 'view'; updateShareDialog(); };
+
+    $('#shareBtn').onclick = () => {
+      shareMode = isViewOnly ? 'view' : 'edit';
+      updateShareDialog();
       $('#shareDialog').showModal();
     };
     $('#copyShareUrlBtn').onclick = async () => {
+      const url = $('#shareUrlInput').value;
       try {
-        await navigator.clipboard.writeText(location.href);
+        await navigator.clipboard.writeText(url);
         toast('URLをコピーしました！');
       } catch {
         $('#shareUrlInput').select();

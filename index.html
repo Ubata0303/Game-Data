@@ -55,6 +55,7 @@
     </section>
 
     <section class="table-pane card">
+      <div id="viewBanner" class="situation hidden" style="margin-bottom: 0.8rem; font-size: 1.25rem;">—</div>
       <div class="table-head">
         <h2>プレー一覧 <span id="playCount" class="muted"></span></h2>
         <div class="row">
@@ -89,8 +90,12 @@
 
   <dialog id="shareDialog">
     <form method="dialog">
-      <h3>📱 タブレットやスマホと共有</h3>
-      <p class="muted">カメラでQRコードを読み取るか、URLを共有して開いてください</p>
+      <h3>📱 共有リンク</h3>
+      <div class="share-mode-toggle">
+        <button type="button" id="shareModeEdit" class="mode-btn on">✏️ 編集用（3人で入力）</button>
+        <button type="button" id="shareModeView" class="mode-btn">👀 閲覧用（見るだけ）</button>
+      </div>
+      <p id="shareDesc" class="muted">入力・編集ができるリンクです</p>
       <div style="text-align: center; margin: 1rem 0;">
         <img id="qrImg" alt="QR Code" style="width: 180px; height: 180px; border: 1px solid var(--line); border-radius: 8px; display: inline-block;">
       </div>
