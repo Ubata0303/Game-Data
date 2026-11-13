@@ -163,30 +163,70 @@ body.view-only tbody tr { cursor: default; }
 body.view-only #userBtn { display: none; }
 body.view-only th.mine, body.view-only td.mine { background: transparent !important; color: inherit !important; font-weight: normal !important; }
 
-/* 絞り込みフィルター（閲覧用専用） */
+/* Hudl風チェックボックス絞り込みフィルター（閲覧専用） */
 body:not(.view-only) #filterBar { display: none !important; }
-.filter-bar {
-  background: #f7f9fc; border: 1px solid var(--line); border-radius: 10px;
-  padding: .6rem .8rem; margin-bottom: .8rem; display: flex; flex-direction: column; gap: .5rem;
+.hudl-filter-bar {
+  background: #f8fafc; border: 1px solid var(--line); border-radius: 10px;
+  padding: .6rem .8rem; margin-bottom: .8rem; display: flex; align-items: flex-end;
+  gap: .6rem; justify-content: space-between;
 }
-.filter-head { display: flex; justify-content: space-between; align-items: center; }
-.filter-title { font-size: .85rem; font-weight: 700; color: var(--text); }
-.filter-reset-btn {
-  font-size: .8rem; padding: .2rem .6rem; min-height: 28px; border-radius: 6px;
-  background: #fff; border: 1px solid var(--line); color: var(--muted); cursor: pointer;
+.hudl-filter-list {
+  display: flex; flex-wrap: wrap; gap: .6rem; align-items: flex-end; flex: 1;
 }
-.filter-reset-btn:active { background: #eef1f5; }
-.filter-fields { display: flex; flex-wrap: wrap; gap: .5rem; align-items: flex-end; }
-.filter-item { display: flex; flex-direction: column; gap: .2rem; min-width: 68px; }
-.filter-item.filter-grow { flex: 1 1 120px; min-width: 110px; }
-.filter-item label { font-size: .75rem; font-weight: 700; color: var(--muted); }
-.filter-item input, .filter-item select {
-  min-height: 36px; height: 36px; padding: .3rem .5rem; font-size: .88rem;
-  border-radius: 6px; border: 1px solid var(--line); background: #fff;
+.hudl-filter-item {
+  position: relative; display: flex; flex-direction: column; gap: .25rem;
 }
-.filter-item input:focus, .filter-item select:focus {
-  outline: 2px solid var(--primary); outline-offset: -1px;
+.hudl-filter-label {
+  font-size: .72rem; font-weight: 700; color: #475569; letter-spacing: .02em; white-space: nowrap;
 }
+.hudl-filter-btn {
+  display: inline-flex; align-items: center; justify-content: space-between; gap: .4rem;
+  background: #fff; border: 1px solid var(--line); border-radius: 6px;
+  padding: .35rem .65rem; min-height: 34px; height: 34px; font-size: .85rem;
+  cursor: pointer; min-width: 110px; max-width: 170px; color: var(--text);
+  box-shadow: 0 1px 2px rgba(0,0,0,.03);
+}
+.hudl-filter-btn:hover { border-color: #94a3b8; }
+.hudl-filter-btn.active {
+  border-color: var(--primary); background: var(--primary-weak); color: var(--primary); font-weight: 600;
+}
+.hudl-btn-text {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; text-align: left;
+}
+.hudl-btn-arrow { font-size: .65rem; color: var(--muted); }
+
+/* ドロップダウンメニュー */
+.hudl-dropdown {
+  position: absolute; top: calc(100% + 4px); left: 0; min-width: 190px; max-width: 280px;
+  max-height: 280px; overflow-y: auto; background: #fff; border: 1px solid var(--line);
+  border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,.15); z-index: 100; padding: .3rem 0;
+}
+.hudl-option {
+  display: flex; align-items: center; gap: .5rem; padding: .45rem .75rem;
+  cursor: pointer; font-size: .85rem; user-select: none; transition: background .1s;
+}
+.hudl-option:hover { background: #f1f5f9; }
+.hudl-option input[type=checkbox] {
+  width: 16px; min-height: 16px; height: 16px; margin: 0; cursor: pointer; flex-shrink: 0;
+}
+.hudl-option-all {
+  border-bottom: 1px solid #e2e8f0; font-weight: 600; background: #fafafa;
+}
+.hudl-option .opt-text {
+  flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.hudl-option .opt-count {
+  font-size: .78rem; color: var(--muted); margin-left: auto; flex-shrink: 0;
+}
+
+/* 解除ボタン */
+.hudl-reset-btn {
+  font-size: .8rem; font-weight: 600; padding: .35rem .75rem; min-height: 34px; height: 34px;
+  border-radius: 6px; background: #fff; border: 1px solid var(--line); color: var(--muted);
+  cursor: pointer; white-space: nowrap; margin-bottom: 0;
+}
+.hudl-reset-btn:hover { border-color: var(--danger); color: var(--danger); }
+.hudl-reset-btn:active { background: #fee2e2; }
 
 .toast {
   position: fixed; left: 50%; bottom: 1.5rem; transform: translateX(-50%) translateY(20px);

@@ -334,38 +334,155 @@
     syncEditor();
   }
 
-  // ---------- 絞り込みフィルター（閲覧専用画面用） ----------
+  // ---------- Hudl風 絞り込みフィルター（閲覧専用） ----------
+  const HUDL_FILTERS = [
+    { key: 'personnel', label: 'PERSONNEL' },
+    { key: 'formation', label: '体型 (FORMATION)' },
+    { key: 'play', label: 'PLAY名' },
+    { key: 'down', label: 'DOWN', format: (v) => ORD[v] || v },
+    { key: 'dist', label: 'DISTANCE' },
+    { key: 'hash', label: 'HASH' },
+    { key: 'ballOn', label: 'BALL ON' },
+  ];
+
+  const activeFilters = {
+    personnel: new Set(),
+    formation: new Set(),
+    play: new Set(),
+    down: new Set(),
+    dist: new Set(),
+    hash: new Set(),
+    ballOn: new Set(),
+  };
+
   function hasActiveFilter() {
-    return !!(
-      $('#filterDown')?.value ||
-      $('#filterDist')?.value.trim() ||
-      $('#filterHash')?.value ||
-      $('#filterBallOn')?.value.trim() ||
-      $('#filterPers')?.value.trim() ||
-      $('#filterFormation')?.value.trim() ||
-      $('#filterPlay')?.value.trim()
-    );
+    return Object.values(activeFilters).some((s) => s.size > 0);
   }
 
   function matchesFilter(p) {
     if (!isViewOnly) return true;
-    const fDown = $('#filterDown')?.value.trim() || '';
-    const fDist = $('#filterDist')?.value.trim().toUpperCase() || '';
-    const fHash = $('#filterHash')?.value.trim().toUpperCase() || '';
-    const fBallOn = $('#filterBallOn')?.value.trim() || '';
-    const fPers = $('#filterPers')?.value.trim().toUpperCase() || '';
-    const fForm = $('#filterFormation')?.value.trim().toUpperCase() || '';
-    const fPlay = $('#filterPlay')?.value.trim().toUpperCase() || '';
-
-    if (fDown && (p.down || '') !== fDown) return false;
-    if (fDist && !(p.dist || '').toUpperCase().includes(fDist)) return false;
-    if (fHash && (p.hash || '').toUpperCase() !== fHash) return false;
-    if (fBallOn && !(p.ballOn || '').includes(fBallOn)) return false;
-    if (fPers && !(p.personnel || '').toUpperCase().includes(fPers)) return false;
-    if (fForm && !(p.formation || '').toUpperCase().includes(fForm)) return false;
-    if (fPlay && !(p.play || '').toUpperCase().includes(fPlay)) return false;
-
+    for (const f of HUDL_FILTERS) {
+      const selected = activeFilters[f.key];
+      if (selected.size === 0) continue; // すべて (ALL)
+      const val = (p[f.key] || '').trim();
+      // 同一項目内は OR（選択した値のどれかに一致すればOK）
+      if (!selected.has(val)) return false;
+    }
     return true;
+  }
+
+  function refreshHudlFilters() {
+    if (!isViewOnly) return;
+    const container = $('#hudlFilterList');
+    if (!container) return;
+
+    HUDL_FILTERS.forEach((f) => {
+      const counts = {};
+      plays.forEach((p) => {
+        const v = (p[f.key] || '').trim();
+        if (v) counts[v] = (counts[v] || 0) + 1;
+      });
+
+      let item = container.querySelector(`[data-fkey="${f.key}"]`);
+      if (!item) {
+        item = el('div', 'hudl-filter-item');
+        item.dataset.fkey = f.key;
+        item.appendChild(el('div', 'hudl-filter-label', f.label));
+
+        const btn = el('button', 'hudl-filter-btn');
+        btn.type = 'button';
+        btn.innerHTML = `<span class="hudl-btn-text">すべて (ALL)</span><span class="hudl-btn-arrow">▾</span>`;
+        item.appendChild(btn);
+
+        const drop = el('div', 'hudl-dropdown hidden');
+        item.appendChild(drop);
+
+        btn.onclick = (e) => {
+          e.stopPropagation();
+          const isClosed = drop.classList.contains('hidden');
+          document.querySelectorAll('.hudl-dropdown').forEach((d) => d.classList.add('hidden'));
+          if (isClosed) drop.classList.remove('hidden');
+        };
+
+        drop.onclick = (e) => e.stopPropagation();
+        container.appendChild(item);
+      }
+
+      updateFilterDropdown(item, f, counts);
+    });
+  }
+
+  function updateFilterDropdown(item, f, counts) {
+    const drop = item.querySelector('.hudl-dropdown');
+    const selected = activeFilters[f.key];
+    drop.innerHTML = '';
+
+    // 「すべて (ALL)」行
+    const allLabel = el('label', 'hudl-option hudl-option-all');
+    const allCheck = el('input');
+    allCheck.type = 'checkbox';
+    allCheck.checked = (selected.size === 0);
+    allLabel.appendChild(allCheck);
+    allLabel.appendChild(el('span', 'opt-text', 'すべて (ALL)'));
+    allCheck.onchange = () => {
+      selected.clear();
+      refreshHudlFilters();
+      renderTable();
+    };
+    drop.appendChild(allLabel);
+
+    // 各値の行
+    const sortedKeys = Object.keys(counts).sort((a, b) => {
+      if (f.key === 'down' || f.key === 'ballOn' || f.key === 'dist') {
+        const na = parseInt(a, 10), nb = parseInt(b, 10);
+        if (!isNaN(na) && !isNaN(nb)) return na - nb;
+      }
+      return counts[b] - counts[a] || a.localeCompare(b);
+    });
+
+    sortedKeys.forEach((val) => {
+      const optLabel = el('label', 'hudl-option');
+      const chk = el('input');
+      chk.type = 'checkbox';
+      chk.checked = selected.has(val);
+      chk.onchange = () => {
+        if (chk.checked) selected.add(val);
+        else selected.delete(val);
+        allCheck.checked = (selected.size === 0);
+        updateFilterButton(item, f);
+        renderTable();
+      };
+      optLabel.appendChild(chk);
+      const displayVal = f.format ? f.format(val) : val;
+      optLabel.appendChild(el('span', 'opt-text', displayVal));
+      optLabel.appendChild(el('span', 'opt-count', `(${counts[val]})`));
+      drop.appendChild(optLabel);
+    });
+
+    updateFilterButton(item, f);
+  }
+
+  function updateFilterButton(item, f) {
+    const selected = activeFilters[f.key];
+    const btnText = item.querySelector('.hudl-btn-text');
+    const btn = item.querySelector('.hudl-filter-btn');
+    if (selected.size === 0) {
+      btnText.textContent = 'すべて (ALL)';
+      btn.classList.remove('active');
+    } else if (selected.size === 1) {
+      const v = Array.from(selected)[0];
+      btnText.textContent = f.format ? f.format(v) : v;
+      btn.classList.add('active');
+    } else {
+      btnText.textContent = `${selected.size}件選択中`;
+      btn.classList.add('active');
+    }
+  }
+
+  function clearAllHudlFilters() {
+    Object.values(activeFilters).forEach((s) => s.clear());
+    refreshHudlFilters();
+    renderTable();
   }
 
   // ---------- プレー一覧 ----------
@@ -435,6 +552,7 @@
     }
 
     if (isViewOnly) {
+      refreshHudlFilters();
       const last = plays[plays.length - 1];
       if (last) {
         const idx = plays.length;
@@ -517,6 +635,7 @@
       document.body.classList.toggle('view-only', isViewOnly);
       currentGameId = m[2].split('?')[0];
       selectedId = null; plays = []; prevUpdated = {}; lastNewestId = null;
+      clearAllHudlFilters();
       $('#home').classList.add('hidden');
       $('#game').classList.remove('hidden');
       $('#backBtn').classList.remove('hidden');
@@ -626,24 +745,13 @@
       if (e.target.checked && newestId()) selectPlay(newestId());
     });
 
-    // 閲覧用画面の絞り込みイベント
-    ['#filterDown', '#filterDist', '#filterHash', '#filterBallOn', '#filterPers', '#filterFormation', '#filterPlay'].forEach((sel) => {
-      const input = $(sel);
-      if (!input) return;
-      input.addEventListener('input', renderTable);
-      input.addEventListener('change', renderTable);
+    // 閲覧用画面の絞り込みイベント（Hudl風）
+    $('#clearFilterBtn').onclick = clearAllHudlFilters;
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.hudl-filter-item')) {
+        document.querySelectorAll('.hudl-dropdown').forEach((d) => d.classList.add('hidden'));
+      }
     });
-
-    $('#clearFilterBtn').onclick = () => {
-      $('#filterDown').value = '';
-      $('#filterDist').value = '';
-      $('#filterHash').value = '';
-      $('#filterBallOn').value = '';
-      $('#filterPers').value = '';
-      $('#filterFormation').value = '';
-      $('#filterPlay').value = '';
-      renderTable();
-    };
 
     $('#editor').addEventListener('focusout', () => setTimeout(() => {
       if (pendingFollow && !editorFocused()) { pendingFollow = false; selectPlay(newestId()); }

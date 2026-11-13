@@ -57,53 +57,10 @@
     <section class="table-pane card">
       <div id="viewBanner" class="situation hidden" style="margin-bottom: 0.8rem; font-size: 1.25rem;">—</div>
       
-      <!-- 閲覧用画面専用の絞り込み検索バー -->
-      <div id="filterBar" class="filter-bar hidden">
-        <div class="filter-head">
-          <span class="filter-title">🔍 絞り込み検索 <span id="filteredCount" class="muted"></span></span>
-          <button type="button" id="clearFilterBtn" class="filter-reset-btn">クリア</button>
-        </div>
-        <div class="filter-fields">
-          <div class="filter-item">
-            <label>Down</label>
-            <select id="filterDown">
-              <option value="">全Down</option>
-              <option value="1">1st</option>
-              <option value="2">2nd</option>
-              <option value="3">3rd</option>
-              <option value="4">4th</option>
-            </select>
-          </div>
-          <div class="filter-item">
-            <label>Dist</label>
-            <input type="text" id="filterDist" placeholder="例: 10, G">
-          </div>
-          <div class="filter-item">
-            <label>Hash</label>
-            <select id="filterHash">
-              <option value="">全Hash</option>
-              <option value="L">L</option>
-              <option value="M">M</option>
-              <option value="R">R</option>
-            </select>
-          </div>
-          <div class="filter-item">
-            <label>Ball On</label>
-            <input type="text" id="filterBallOn" placeholder="1〜99">
-          </div>
-          <div class="filter-item">
-            <label>Pers</label>
-            <input type="text" id="filterPers" placeholder="例: 11">
-          </div>
-          <div class="filter-item filter-grow">
-            <label>Formation</label>
-            <input type="text" id="filterFormation" placeholder="検索...">
-          </div>
-          <div class="filter-item filter-grow">
-            <label>Play</label>
-            <input type="text" id="filterPlay" placeholder="検索...">
-          </div>
-        </div>
+      <!-- 閲覧用画面専用の絞り込み検索バー（Hudl風） -->
+      <div id="filterBar" class="hudl-filter-bar hidden">
+        <div class="hudl-filter-list" id="hudlFilterList"></div>
+        <button type="button" id="clearFilterBtn" class="hudl-reset-btn">× 解除</button>
       </div>
       <div class="table-head">
         <h2>プレー一覧 <span id="playCount" class="muted"></span></h2>
