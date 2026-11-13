@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Football Data Live</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="back-btn hidden" id="backBtn" href="#/">← 試合一覧</a>
+    <a class="brand" href="#/">🏈 Football Data Live</a>
+    <div class="game-title" id="gameTitle"></div>
+    <div class="spacer"></div>
+    <span id="status" class="status"></span>
+    <button id="userBtn" class="ghost" title="名前を変更"></button>
+  </header>
+
+  <!-- 試合一覧 -->
+  <main id="home" class="screen hidden">
+    <section class="card">
+      <h2>新しい試合を作成</h2>
+      <form id="newGameForm" class="row">
+        <input id="newGameName" placeholder="例: 2026/11/15 vs ○○大学" required>
+        <button class="primary">作成</button>
+      </form>
+    </section>
+    <section class="card">
+      <h2>試合一覧</h2>
+      <ul id="gameList" class="game-list"></ul>
+    </section>
+  </main>
+
+  <!-- 試合中の入力画面 -->
+  <main id="game" class="screen hidden">
+    <section class="editor card" id="editorPane">
+      <div class="role-bar">
+        <span class="role-label">担当</span>
+        <div id="roleBar" class="role-btns"></div>
+      </div>
+      <div class="editor-head">
+        <span id="editingLabel" class="muted">プレー未選択</span>
+        <label class="toggle"><input type="checkbox" id="followLatest" checked> 最新プレーを追従</label>
+      </div>
+      <div id="situation" class="situation">—</div>
+      <div class="actions" id="actions">
+        <button id="addPlayBtn" class="primary big">＋ 次のプレー</button>
+        <button id="newSeriesBtn" class="big">＋ 新シリーズ</button>
+      </div>
+      <p id="roleHint" class="role-hint hidden">状況担当が「＋ 次のプレー」を押すと、自動で新しいプレーに切り替わります</p>
+      <div id="editor"></div>
+      <div class="editor-foot">
+        <button id="deleteBtn" class="danger">このプレーを削除</button>
+      </div>
+    </section>
+
+    <section class="table-pane card">
+      <div class="table-head">
+        <h2>プレー一覧 <span id="playCount" class="muted"></span></h2>
+        <div class="row">
+          <button id="shareBtn">共有リンク</button>
+          <button id="csvBtn">CSV書き出し</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table id="playTable">
+          <thead>
+            <tr>
+              <th>#</th><th data-key="qtr">Q</th><th data-key="series">Series</th><th data-key="hash">Hash</th>
+              <th data-key="ballOn">Ball On</th><th data-key="down">D&amp;D</th>
+              <th data-key="personnel">Pers</th><th data-key="formation">OFF Formation</th>
+              <th data-key="play">Play</th><th data-key="defSign">Def Sign</th><th>更新</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="nameDialog">
+    <form method="dialog">
+      <h3>あなたの名前</h3>
+      <p class="muted">誰が編集したかを表示するために使います</p>
+      <input id="nameInput" required maxlength="20" placeholder="例: 田中">
+      <div class="row end"><button class="primary">OK</button></div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="config.js"></script>
+  <script src="store.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

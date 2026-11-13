@@ -1,0 +1,10 @@
+rules_version = '2';
+// 試作用ルール：URLを知っている人は誰でも読み書きできる（期限付き）
+// 本格運用前に「チーム用パスワード」や「Googleログイン」などで制限を追加すること
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if request.time < timestamp.date(2027, 3, 31);
+    }
+  }
+}
