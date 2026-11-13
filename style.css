@@ -163,6 +163,31 @@ body.view-only tbody tr { cursor: default; }
 body.view-only #userBtn { display: none; }
 body.view-only th.mine, body.view-only td.mine { background: transparent !important; color: inherit !important; font-weight: normal !important; }
 
+/* 絞り込みフィルター（閲覧用専用） */
+body:not(.view-only) #filterBar { display: none !important; }
+.filter-bar {
+  background: #f7f9fc; border: 1px solid var(--line); border-radius: 10px;
+  padding: .6rem .8rem; margin-bottom: .8rem; display: flex; flex-direction: column; gap: .5rem;
+}
+.filter-head { display: flex; justify-content: space-between; align-items: center; }
+.filter-title { font-size: .85rem; font-weight: 700; color: var(--text); }
+.filter-reset-btn {
+  font-size: .8rem; padding: .2rem .6rem; min-height: 28px; border-radius: 6px;
+  background: #fff; border: 1px solid var(--line); color: var(--muted); cursor: pointer;
+}
+.filter-reset-btn:active { background: #eef1f5; }
+.filter-fields { display: flex; flex-wrap: wrap; gap: .5rem; align-items: flex-end; }
+.filter-item { display: flex; flex-direction: column; gap: .2rem; min-width: 68px; }
+.filter-item.filter-grow { flex: 1 1 120px; min-width: 110px; }
+.filter-item label { font-size: .75rem; font-weight: 700; color: var(--muted); }
+.filter-item input, .filter-item select {
+  min-height: 36px; height: 36px; padding: .3rem .5rem; font-size: .88rem;
+  border-radius: 6px; border: 1px solid var(--line); background: #fff;
+}
+.filter-item input:focus, .filter-item select:focus {
+  outline: 2px solid var(--primary); outline-offset: -1px;
+}
+
 .toast {
   position: fixed; left: 50%; bottom: 1.5rem; transform: translateX(-50%) translateY(20px);
   background: #111827; color: #fff; padding: .6rem 1rem; border-radius: 8px; opacity: 0;

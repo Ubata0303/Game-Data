@@ -334,11 +334,51 @@
     syncEditor();
   }
 
+  // ---------- 絞り込みフィルター（閲覧専用画面用） ----------
+  function hasActiveFilter() {
+    return !!(
+      $('#filterDown')?.value ||
+      $('#filterDist')?.value.trim() ||
+      $('#filterHash')?.value ||
+      $('#filterBallOn')?.value.trim() ||
+      $('#filterPers')?.value.trim() ||
+      $('#filterFormation')?.value.trim() ||
+      $('#filterPlay')?.value.trim()
+    );
+  }
+
+  function matchesFilter(p) {
+    if (!isViewOnly) return true;
+    const fDown = $('#filterDown')?.value.trim() || '';
+    const fDist = $('#filterDist')?.value.trim().toUpperCase() || '';
+    const fHash = $('#filterHash')?.value.trim().toUpperCase() || '';
+    const fBallOn = $('#filterBallOn')?.value.trim() || '';
+    const fPers = $('#filterPers')?.value.trim().toUpperCase() || '';
+    const fForm = $('#filterFormation')?.value.trim().toUpperCase() || '';
+    const fPlay = $('#filterPlay')?.value.trim().toUpperCase() || '';
+
+    if (fDown && (p.down || '') !== fDown) return false;
+    if (fDist && !(p.dist || '').toUpperCase().includes(fDist)) return false;
+    if (fHash && (p.hash || '').toUpperCase() !== fHash) return false;
+    if (fBallOn && !(p.ballOn || '').includes(fBallOn)) return false;
+    if (fPers && !(p.personnel || '').toUpperCase().includes(fPers)) return false;
+    if (fForm && !(p.formation || '').toUpperCase().includes(fForm)) return false;
+    if (fPlay && !(p.play || '').toUpperCase().includes(fPlay)) return false;
+
+    return true;
+  }
+
   // ---------- プレー一覧 ----------
   function renderTable() {
     const tbody = $('#playTable tbody');
     tbody.innerHTML = '';
+    let visibleCount = 0;
+    const isFiltering = isViewOnly && hasActiveFilter();
+
     plays.forEach((p, i) => {
+      if (!matchesFilter(p)) return;
+      visibleCount++;
+
       const tr = el('tr');
       if (p.id === selectedId) tr.classList.add('selected');
       const prev = prevUpdated[p.id];
@@ -362,7 +402,14 @@
       }
       tbody.appendChild(tr);
     });
-    $('#playCount').textContent = `(${plays.length})`;
+
+    if (isFiltering) {
+      $('#playCount').textContent = `(${visibleCount} / 全${plays.length})`;
+      $('#filteredCount').textContent = `(${visibleCount}件 表示中)`;
+    } else {
+      $('#playCount').textContent = `(${plays.length})`;
+      $('#filteredCount').textContent = '';
+    }
   }
 
   function onPlays(list) {
@@ -476,6 +523,7 @@
       const gname = games.find((g) => g.id === currentGameId)?.name || '';
       $('#gameTitle').textContent = gname + (isViewOnly ? '（閲覧用）' : '');
       $('#viewBanner').classList.toggle('hidden', !isViewOnly);
+      $('#filterBar').classList.toggle('hidden', !isViewOnly);
       unsubPlays = store.subscribePlays(currentGameId, onPlays);
     } else {
       isViewOnly = false;
@@ -487,6 +535,7 @@
       $('#backBtn').classList.add('hidden');
       $('#gameTitle').textContent = '';
       $('#viewBanner').classList.add('hidden');
+      $('#filterBar').classList.add('hidden');
     }
   }
 
@@ -576,6 +625,26 @@
     $('#followLatest').addEventListener('change', (e) => {
       if (e.target.checked && newestId()) selectPlay(newestId());
     });
+
+    // 閲覧用画面の絞り込みイベント
+    ['#filterDown', '#filterDist', '#filterHash', '#filterBallOn', '#filterPers', '#filterFormation', '#filterPlay'].forEach((sel) => {
+      const input = $(sel);
+      if (!input) return;
+      input.addEventListener('input', renderTable);
+      input.addEventListener('change', renderTable);
+    });
+
+    $('#clearFilterBtn').onclick = () => {
+      $('#filterDown').value = '';
+      $('#filterDist').value = '';
+      $('#filterHash').value = '';
+      $('#filterBallOn').value = '';
+      $('#filterPers').value = '';
+      $('#filterFormation').value = '';
+      $('#filterPlay').value = '';
+      renderTable();
+    };
+
     $('#editor').addEventListener('focusout', () => setTimeout(() => {
       if (pendingFollow && !editorFocused()) { pendingFollow = false; selectPlay(newestId()); }
     }, 0));
