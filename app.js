@@ -1,4 +1,8 @@
 (() => {
+  // 万が一エラーが起きた場合に画面に理由を表示
+  window.onerror = function (msg, url, line, col, err) {
+    alert(`エラーが発生しました:\n${msg}\n(行: ${line}, 列: ${col})\n${err?.stack || ''}`);
+  };
   const $ = (s) => document.querySelector(s);
   const el = (tag, cls, text) => {
     const e = document.createElement(tag);
