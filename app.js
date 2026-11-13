@@ -418,24 +418,16 @@
   }
 
   // ---------- ステータス ----------
-  function updateStatus() {
+  function updateStatus(text, cls) {
     const s = $('#status');
-    if (store.mode === 'local') {
-      s.textContent = 'ローカルモード（この端末のみ）';
-      s.className = 'status warn';
-      s.title = 'config.js に Firebase の設定をすると端末間で共有できます';
+    if (text != null) {
+      s.textContent = text;
+      s.className = 'status ' + (cls || 'ok');
       return;
     }
-    const pending = plays.filter((p) => p._pending).length;
     if (!navigator.onLine) {
-      s.textContent = `オフライン${pending ? `・未送信 ${pending}件` : ''}`;
+      s.textContent = 'オフライン';
       s.className = 'status bad';
-    } else if (pending) {
-      s.textContent = `送信中 ${pending}件`;
-      s.className = 'status warn';
-    } else {
-      s.textContent = '● 同期中';
-      s.className = 'status ok';
     }
   }
 
@@ -466,6 +458,7 @@
       $('#gameTitle').textContent = games.find((g) => g.id === currentGameId)?.name || '';
       unsubPlays = store.subscribePlays(currentGameId, onPlays);
     } else {
+      if (store.leaveGame) store.leaveGame();
       currentGameId = null;
       $('#game').classList.add('hidden');
       $('#home').classList.remove('hidden');
@@ -524,9 +517,21 @@
       }
     };
     $('#csvBtn').onclick = exportCsv;
-    $('#shareBtn').onclick = async () => {
-      try { await navigator.clipboard.writeText(location.href); toast('この試合のURLをコピーしました'); }
-      catch { prompt('このURLを他のメンバーに共有してください', location.href); }
+    $('#shareBtn').onclick = () => {
+      const url = location.href;
+      $('#shareUrlInput').value = url;
+      $('#qrImg').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
+      $('#shareDialog').showModal();
+    };
+    $('#copyShareUrlBtn').onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(location.href);
+        toast('URLをコピーしました！');
+      } catch {
+        $('#shareUrlInput').select();
+        document.execCommand('copy');
+        toast('URLをコピーしました！');
+      }
     };
     $('#followLatest').addEventListener('change', (e) => {
       if (e.target.checked && newestId()) selectPlay(newestId());
@@ -534,9 +539,13 @@
     $('#editor').addEventListener('focusout', () => setTimeout(() => {
       if (pendingFollow && !editorFocused()) { pendingFollow = false; selectPlay(newestId()); }
     }, 0));
-    window.addEventListener('online', updateStatus);
-    window.addEventListener('offline', updateStatus);
+    window.addEventListener('online', () => updateStatus());
+    window.addEventListener('offline', () => updateStatus());
     window.addEventListener('hashchange', route);
+
+    if (store.onStatusChange) {
+      store.onStatusChange((text, cls) => updateStatus(text, cls));
+    }
 
     store.subscribeGames((list) => { games = list; renderGames(); });
     updateStatus();

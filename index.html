@@ -87,6 +87,21 @@
     </form>
   </dialog>
 
+  <dialog id="shareDialog">
+    <form method="dialog">
+      <h3>📱 タブレットやスマホと共有</h3>
+      <p class="muted">カメラでQRコードを読み取るか、URLを共有して開いてください</p>
+      <div style="text-align: center; margin: 1rem 0;">
+        <img id="qrImg" alt="QR Code" style="width: 180px; height: 180px; border: 1px solid var(--line); border-radius: 8px; display: inline-block;">
+      </div>
+      <input id="shareUrlInput" readonly style="font-size: 0.85rem; margin-bottom: 0.8rem; background: #f7f9fc;">
+      <div class="row end">
+        <button type="button" id="copyShareUrlBtn" class="primary">URLをコピー</button>
+        <button>閉じる</button>
+      </div>
+    </form>
+  </dialog>
+
   <div id="toast" class="toast"></div>
 
   <script src="config.js"></script>
