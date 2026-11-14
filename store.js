@@ -2,7 +2,8 @@
 // データ保存層：MQTT over WebSocket (WSS) リアルタイム同期
 // ------------------------------------------------------------
 // アカウント登録・ログイン・外部設定は一切不要！
-// 大学Wi-Fi・ポケットWi-Fi・スタジアムでも確実に通る暗号化通信（WSS:443）
+// オフラインキュー機能搭載：ネット切断中に打ち込んだデータは端末に保存され、
+// 再接続した瞬間に自動で全件送信＆他端末と完全同期されます。
 // ============================================================
 (function () {
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -27,6 +28,8 @@
       this.client = null;
       this.myClientId = 'c_' + uid();
       this.status = { text: '準備完了', cls: 'ok' };
+      this.pendingQueue = [];
+      this._loadPending();
 
       // 同一端末のタブ間同期
       this.ch = 'BroadcastChannel' in window ? new BroadcastChannel('fdl_sync_ch') : null;
@@ -45,6 +48,19 @@
     }
     _emit() { this.listeners.forEach((f) => f()); }
     _sub(fn) { this.listeners.add(fn); fn(); return () => this.listeners.delete(fn); }
+
+    _loadPending() {
+      try {
+        this.pendingQueue = JSON.parse(localStorage.getItem('fdl_pending_v1')) || [];
+      } catch {
+        this.pendingQueue = [];
+      }
+    }
+    _savePending() {
+      try {
+        localStorage.setItem('fdl_pending_v1', JSON.stringify(this.pendingQueue));
+      } catch {}
+    }
 
     onStatusChange(cb) {
       this.statusListeners.add(cb);
@@ -76,7 +92,12 @@
       this.joinRoom(gid);
       return this._sub(() => {
         const d = this._load();
-        cb(Object.entries(d.plays[gid] || {}).map(([id, p]) => ({ id, ...p })));
+        const pendingPids = new Set(this.pendingQueue.map((m) => m.pid || m.id).filter(Boolean));
+        cb(Object.entries(d.plays[gid] || {}).map(([id, p]) => ({
+          id,
+          ...p,
+          _pending: pendingPids.has(id) // 未送信のプレーにフラグを付与
+        })));
       });
     }
 
@@ -122,7 +143,6 @@
       this._setStatus('接続中...', 'warn');
       const topic = `fdl/room/${gid}`;
 
-      // 信頼性の高い複数の公開暗号化WebSocketブローカー（ポート443・WSS）
       const brokers = [
         'wss://broker.emqx.io:8084/mqtt',
         'wss://broker.hivemq.com:8884/mqtt'
@@ -135,26 +155,28 @@
             clientId: `fdl_${this.myClientId}`,
             clean: true,
             connectTimeout: 8000,
-            reconnectPeriod: 3000
+            reconnectPeriod: 2500
           });
         } catch (e) {
           console.warn('MQTT接続失敗:', e);
-          this._setStatus('オフライン（端末内保存）', 'warn');
+          this._updateOfflineStatus();
           return;
         }
 
         this.client.on('connect', () => {
-          this._setStatus('● リアルタイム同期中', 'ok');
           this.client.subscribe(topic, { qos: 1 });
-          // 新しく入ったことを知らせて、すでに開いている端末があれば最新データをリクエスト
-          this._publish({ type: 'REQ_SYNC', from: this.myClientId });
+          // 接続した瞬間に、未送信キューをすべて一気に再送！
+          this._flushPending();
+          // 他端末へ最新同期をリクエスト
+          this._sendDirect({ type: 'REQ_SYNC', from: this.myClientId });
+          this._setStatus('● リアルタイム同期中', 'ok');
         });
 
         this.client.on('message', (t, payload) => {
           if (t !== topic) return;
           try {
             const msg = JSON.parse(payload.toString());
-            if (msg.sender === this.myClientId) return; // 自分が送ったメッセージは無視
+            if (msg.sender === this.myClientId) return; // 自分が送ったものは無視
             this._handleRemoteMessage(msg);
           } catch (e) {
             console.warn('受信メッセージ解析エラー:', e);
@@ -162,41 +184,103 @@
         });
 
         this.client.on('reconnect', () => {
-          this._setStatus('再接続中...', 'warn');
+          this._updateOfflineStatus('再接続中...');
         });
 
         this.client.on('offline', () => {
-          this._setStatus('オフライン（電波待機中）', 'warn');
+          this._updateOfflineStatus('オフライン');
         });
 
         this.client.on('error', (err) => {
           console.warn('MQTTエラー:', err);
-          this._setStatus('接続待機中', 'warn');
+          this._updateOfflineStatus('接続待機中');
         });
       } else {
-        // すでに接続済みの場合はトピック購読
         this.client.subscribe(topic, { qos: 1 });
+        this._flushPending();
+        this._sendDirect({ type: 'REQ_SYNC', from: this.myClientId });
         this._setStatus('● リアルタイム同期中', 'ok');
-        this._publish({ type: 'REQ_SYNC', from: this.myClientId });
       }
     }
 
-    _publish(msg) {
+    _updateOfflineStatus(prefix = 'オフライン') {
+      const count = this.pendingQueue.length;
+      if (count > 0) {
+        this._setStatus(`${prefix}（未送信 ${count}件）`, 'warn');
+      } else {
+        this._setStatus(`${prefix}（電波待機中）`, 'warn');
+      }
+    }
+
+    _sendDirect(msg) {
       if (!this.client || !this.client.connected || !this.activeGid) return;
       const topic = `fdl/room/${this.activeGid}`;
       const payload = JSON.stringify({ ...msg, sender: this.myClientId, gid: this.activeGid });
       this.client.publish(topic, payload, { qos: 1 });
     }
 
+    _publish(msg) {
+      if (!this.activeGid) return;
+      const fullMsg = { ...msg, sender: this.myClientId, gid: this.activeGid, time: Date.now() };
+
+      if (!this.client || !this.client.connected) {
+        // 回線切断中：未送信キューに保存
+        this.pendingQueue.push(fullMsg);
+        this._savePending();
+        this._updateOfflineStatus();
+        this._emit(); // 画面の ⏳ アイコンを更新
+        return;
+      }
+
+      const topic = `fdl/room/${this.activeGid}`;
+      const payload = JSON.stringify(fullMsg);
+      this.client.publish(topic, payload, { qos: 1 });
+    }
+
+    // 接続復帰時に未送信キューを一気に送信＆他端末と完全マージ
+    _flushPending() {
+      if (!this.client || !this.client.connected || !this.activeGid) return;
+      const topic = `fdl/room/${this.activeGid}`;
+
+      if (this.pendingQueue.length > 0) {
+        console.log(`未送信データ ${this.pendingQueue.length} 件を一括送信中...`);
+        while (this.pendingQueue.length > 0) {
+          const msg = this.pendingQueue.shift();
+          try {
+            this.client.publish(topic, JSON.stringify(msg), { qos: 1 });
+          } catch (e) {
+            console.warn('再送エラー:', e);
+          }
+        }
+        this._savePending();
+      }
+
+      // 念のため、手元の最新データ一式を全端末へブロードキャスト（相互補完）
+      const d = this._load();
+      const game = d.games[this.activeGid];
+      const plays = d.plays[this.activeGid] || {};
+      if (Object.keys(plays).length > 0) {
+        this.client.publish(topic, JSON.stringify({
+          type: 'SYNC_FULL',
+          sender: this.myClientId,
+          gid: this.activeGid,
+          game,
+          plays
+        }), { qos: 1 });
+      }
+
+      this._emit(); // ⏳ マークを解除
+    }
+
     _handleRemoteMessage(msg) {
       const d = this._load();
 
-      // 誰かが入ってきたので、手元の最新データを返してあげる
+      // 他の端末が入ってきたので手元の最新データを返信
       if (msg.type === 'REQ_SYNC') {
         const game = d.games[this.activeGid];
         const plays = d.plays[this.activeGid] || {};
         if (Object.keys(plays).length > 0 || game) {
-          this._publish({
+          this._sendDirect({
             type: 'RESP_SYNC',
             target: msg.from,
             game: game,
@@ -206,13 +290,37 @@
         return;
       }
 
-      // 同期データを受け取った場合
+      // 初回同期データを受信
       if (msg.type === 'RESP_SYNC') {
         if (msg.target && msg.target !== this.myClientId) return;
         if (msg.game && !d.games[this.activeGid]) {
           d.games[this.activeGid] = msg.game;
         }
-        d.plays[this.activeGid] = { ...(d.plays[this.activeGid] || {}), ...msg.plays };
+        d.plays[this.activeGid] = { ...(msg.plays || {}), ...(d.plays[this.activeGid] || {}) };
+        this._save(d);
+        return;
+      }
+
+      // 回線復帰時のフル同期（相互補完マージ）
+      if (msg.type === 'SYNC_FULL') {
+        if (msg.game && !d.games[this.activeGid]) {
+          d.games[this.activeGid] = msg.game;
+        }
+        const localPlays = d.plays[this.activeGid] || {};
+        const remotePlays = msg.plays || {};
+        const merged = { ...localPlays };
+
+        Object.entries(remotePlays).forEach(([pid, rPlay]) => {
+          const lPlay = merged[pid];
+          if (!lPlay) {
+            merged[pid] = rPlay;
+          } else {
+            // 両方にある場合は各項目をマージ
+            merged[pid] = { ...lPlay, ...rPlay, updatedAt: Math.max(lPlay.updatedAt || 0, rPlay.updatedAt || 0) };
+          }
+        });
+
+        d.plays[this.activeGid] = merged;
         this._save(d);
         return;
       }
@@ -236,7 +344,6 @@
   }
 
   window.createStore = async function () {
-    // 高速で信頼性の高い MQTT.js CDN（暗号化WSS通信）
     try {
       await loadScript('https://unpkg.com/mqtt@5.3.5/dist/mqtt.min.js');
     } catch {
