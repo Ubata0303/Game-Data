@@ -615,13 +615,44 @@
     ul.innerHTML = '';
     if (!games.length) ul.appendChild(el('li', 'muted', 'まだ試合がありません'));
     games.forEach((g) => {
-      const li = el('li');
-      const a = el('a', null, g.name);
+      const li = el('li', 'game-item');
+      const a = el('a', 'game-link', g.name);
       a.href = '#/game/' + g.id;
-      li.append(a, el('span', 'muted', new Date(g.createdAt).toLocaleString('ja-JP')));
+
+      const right = el('div', 'row game-actions');
+      const time = el('span', 'muted game-time', new Date(g.createdAt).toLocaleString('ja-JP'));
+
+      const editBtn = el('button', 'ghost-btn', '✎ 名前変更');
+      editBtn.type = 'button';
+      editBtn.title = '試合名を変更';
+      editBtn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const newName = prompt('新しい試合名を入力してください:', g.name);
+        if (newName && newName.trim() && newName.trim() !== g.name) {
+          store.updateGame(g.id, { name: newName.trim() });
+        }
+      };
+
+      const delBtn = el('button', 'ghost-btn danger-text', '削除');
+      delBtn.type = 'button';
+      delBtn.title = 'この試合を削除';
+      delBtn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (confirm(`試合「${g.name}」を削除しますか？\n（入力したプレーデータもすべて削除されます）`)) {
+          store.deleteGame(g.id);
+        }
+      };
+
+      right.append(time, editBtn, delBtn);
+      li.append(a, right);
       ul.appendChild(li);
     });
-    if (currentGameId) $('#gameTitle').textContent = games.find((g) => g.id === currentGameId)?.name || '';
+    if (currentGameId) {
+      const gname = games.find((g) => g.id === currentGameId)?.name || '';
+      $('#gameTitle').textContent = gname + (isViewOnly ? '（閲覧用）' : '');
+    }
   }
 
   function route() {
@@ -686,6 +717,17 @@
 
     $('#userBtn').onclick = askName;
     if (!me) askName();
+
+    // 試合中ヘッダーの試合名クリックで名前変更
+    $('#gameTitle').onclick = () => {
+      if (!currentGameId || isViewOnly) return;
+      const g = games.find((x) => x.id === currentGameId);
+      if (!g) return;
+      const newName = prompt('試合名を変更:', g.name);
+      if (newName && newName.trim() && newName.trim() !== g.name) {
+        store.updateGame(g.id, { name: newName.trim() });
+      }
+    };
 
     $('#newGameForm').addEventListener('submit', (e) => {
       e.preventDefault();

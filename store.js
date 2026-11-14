@@ -88,6 +88,24 @@
       return id;
     }
 
+    updateGame(gid, patch) {
+      const d = this._load();
+      if (!d.games[gid]) return;
+      Object.assign(d.games[gid], patch);
+      this._save(d);
+      this._publish({ type: 'UPDATE_GAME', gid, patch });
+    }
+
+    deleteGame(gid) {
+      const d = this._load();
+      if (d.games[gid]) {
+        delete d.games[gid];
+        delete d.plays[gid];
+        this._save(d);
+        this._publish({ type: 'DELETE_GAME', gid });
+      }
+    }
+
     subscribePlays(gid, cb) {
       this.joinRoom(gid);
       return this._sub(() => {
@@ -337,6 +355,17 @@
       } else if (msg.type === 'DELETE_PLAY') {
         if (d.plays[msg.gid]) {
           delete d.plays[msg.gid][msg.pid];
+          this._save(d);
+        }
+      } else if (msg.type === 'UPDATE_GAME') {
+        if (d.games[msg.gid]) {
+          Object.assign(d.games[msg.gid], msg.patch);
+          this._save(d);
+        }
+      } else if (msg.type === 'DELETE_GAME') {
+        if (d.games[msg.gid]) {
+          delete d.games[msg.gid];
+          delete d.plays[msg.gid];
           this._save(d);
         }
       }

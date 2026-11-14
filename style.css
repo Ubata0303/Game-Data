@@ -58,7 +58,11 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 .back-btn:active { background: rgba(255,255,255,.15); }
 /* 試合画面では戻るボタンがあるのでロゴは狭い画面で隠す */
 @media (max-width: 700px) { .back-btn:not(.hidden) ~ .brand { display: none; } }
-.topbar .game-title { font-weight: 600; opacity: .9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.topbar .game-title {
+  font-weight: 600; opacity: .9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  cursor: pointer; padding: .2rem .4rem; border-radius: 4px;
+}
+.topbar .game-title:hover { background: rgba(255,255,255,.1); text-decoration: underline; }
 .topbar .spacer { flex: 1; }
 .topbar .ghost { color: #fff; }
 .status { font-size: .85rem; padding: .2rem .6rem; border-radius: 99px; white-space: nowrap; }
@@ -71,8 +75,20 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 .card { background: var(--card); border-radius: 12px; padding: .9rem; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
 #home { max-width: 720px; margin: 0 auto; display: grid; gap: .8rem; }
 .game-list { list-style: none; padding: 0; margin: 0; }
-.game-list li { display: flex; justify-content: space-between; gap: 1rem; padding: .8rem .2rem; border-bottom: 1px solid var(--line); }
-.game-list a { color: var(--primary); font-weight: 600; text-decoration: none; }
+.game-list li {
+  display: flex; justify-content: space-between; align-items: center; gap: .8rem;
+  padding: .7rem .2rem; border-bottom: 1px solid var(--line); flex-wrap: wrap;
+}
+.game-list a { color: var(--primary); font-weight: 600; text-decoration: none; font-size: 1.05rem; }
+.game-actions { gap: .5rem; flex-wrap: nowrap; }
+.game-time { font-size: .8rem; }
+.ghost-btn {
+  font-size: .8rem; font-weight: 600; padding: .25rem .6rem; min-height: 32px; height: 32px;
+  border: 1px solid var(--line); border-radius: 6px; background: #fff; cursor: pointer; white-space: nowrap;
+}
+.ghost-btn:hover { background: #f1f5f9; }
+.ghost-btn.danger-text { color: var(--danger); border-color: #fecaca; }
+.ghost-btn.danger-text:hover { background: #fee2e2; }
 
 #game { display: grid; grid-template-columns: minmax(380px, 460px) 1fr; gap: .8rem; height: calc(100vh - 52px); }
 @media (max-width: 900px) {
